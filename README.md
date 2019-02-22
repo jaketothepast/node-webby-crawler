@@ -7,3 +7,4 @@ This project is a tool I intend to use for another personal project to collect s
 1. ~~queueing~~
 2. Setup a datastore -- Probably will use docker for this, some sort of docker-compose setup/
 3. Tests -- Probably with Jest.
+4. Docker Compose - Set up a dev environment (or environment in general) using Docker compose.
