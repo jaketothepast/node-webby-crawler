@@ -9,12 +9,6 @@ queue.push("item.hello");
 queue.push("Item.hi");
 queue.push("another.site");
 
-function messageWorkers(message) {
-    Object.values(cluster.workers).map(worker => {
-        worker.send(message)
-    })
-}
-
 function startQueueing(worker) {
     while (true) {
         if (!(queue.length == 0))
@@ -29,8 +23,6 @@ function visitSite(site) {
 function startCrawler() {
     if (cluster.isMaster) {
         // Fork the cluster.
-        console.log("I am the master.")
-        console.log("Here is my queue " + queue)
         var worker = cluster.fork();
 
         // Register an event listener on the cluster worker (the child.)
