@@ -4,10 +4,8 @@
 
 const cluster = require('cluster');
 
+// Global queue for queueing sites.
 var queue = new Array()
-queue.push("item.hello");
-queue.push("Item.hi");
-queue.push("another.site");
 
 function startQueueing(worker) {
     while (true) {
@@ -22,6 +20,12 @@ function visitSite(site) {
 
 function startCrawler() {
     if (cluster.isMaster) {
+        // Push all command line argument to the queue.
+        process.argv.forEach((arg, index) => {
+            if (index > 1)
+                queue.unshift(arg)
+        })
+        
         // Fork the cluster.
         var worker = cluster.fork();
 
