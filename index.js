@@ -12,11 +12,26 @@ var queue = new Array()
 
 function startQueueing(worker) {
     while (true) {
-        if (!(queue.length == 0))
+        if (!(queue.length == 0)) {
             worker.send(queue.pop())
+            console.log("queueing");
+        }
     }
 }
 
+/**
+ * Enqueue the site in the crawler.
+ * @param {String} site A site to be enqueued by the crawler.
+ */
+function enqueue(site) {
+    console.log("Master received " + site)
+    queue.unshift(site)
+}
+
+/**
+ * Crawl a site
+ * @param {String} site A site that we are crawling
+ */
 function visitSite(site) {
     let options = {
         method: 'GET',
@@ -26,16 +41,24 @@ function visitSite(site) {
             return cheerio.load(body);
         }
     }
+
     // Use request promise to return a promise that we process this bad boy.
     rp(options)
         .then(($) => {
-            console.log($("a"))
+            let links = $("a")
+            links.each((i, link) => {
+                console.log("Sending to master " + $(link).attr('href'))
+                process.send($(link).attr('href'))
+            })
         })
         .catch((err) => {
-            console.log("An error occurred getting " + site);
+            console.log(err)
         })
 }
 
+/**
+ * Start the crawler, and start the child worker.
+ */
 function startCrawler() {
     if (cluster.isMaster) {
         // Push all command line argument to the queue.
@@ -49,7 +72,8 @@ function startCrawler() {
 
         // Register an event listener on the cluster worker (the child.)
         worker.on('message', message => {
-            visitSite(message)
+            console.log("Received message " + message + " from worker.")
+            enqueue(message)
         })
 
         // Register an exit handler with the master.
@@ -59,7 +83,10 @@ function startCrawler() {
 
         startQueueing(worker)
     } else {
-        process.on('message', message => visitSite(message))
+        process.on('message', message => {
+            console.log("Received message from master. " + message)
+            visitSite(message)
+        })
     }
 }
 
