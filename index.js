@@ -12,21 +12,13 @@ var queue = new Array()
 
 function startQueueing(worker) {
     while (true) {
-        if (!(queue.length == 0)) {
+        if (queue.length !== 0) {
             worker.send(queue.pop())
             console.log("queueing");
         }
     }
 }
 
-/**
- * Enqueue the site in the crawler.
- * @param {String} site A site to be enqueued by the crawler.
- */
-function enqueue(site) {
-    console.log("Master received " + site)
-    queue.unshift(site)
-}
 
 /**
  * Crawl a site
@@ -47,8 +39,7 @@ function visitSite(site) {
         .then(($) => {
             let links = $("a")
             links.each((i, link) => {
-                console.log("Sending to master " + $(link).attr('href'))
-                process.send($(link).attr('href'))
+                process.send({site: $(link).attr('href')})
             })
         })
         .catch((err) => {
@@ -56,38 +47,37 @@ function visitSite(site) {
         })
 }
 
-/**
- * Start the crawler, and start the child worker.
- */
-function startCrawler() {
-    if (cluster.isMaster) {
-        // Push all command line argument to the queue.
-        process.argv.forEach((arg, index) => {
-            if (index > 1)
-                queue.unshift(arg)
-        })
 
-        // Fork the cluster.
-        var worker = cluster.fork();
+if (cluster.isMaster) {
+    // Push all command line argument to the queue.
+    process.argv.forEach((arg, index) => {
+        if (index > 1)
+            queue.unshift(arg)
+    })
 
-        // Register an event listener on the cluster worker (the child.)
-        worker.on('message', message => {
-            console.log("Received message " + message + " from worker.")
-            enqueue(message)
-        })
+    // Fork the cluster.
+    var worker = cluster.fork();
 
-        // Register an exit handler with the master.
-        cluster.on("exit", (worker, code, signal) => {
-            console.log("Worker died.");
-        })
+    // Register an event listener on the cluster worker (the child.)
+    worker.on("message", msg => {
+        if (msg.site) {
+            console.log("YAY")
+        }
+        console.log("Received message " + msg + " from worker.")
+        queue.unshift(msg.site)
+    })
 
-        startQueueing(worker)
-    } else {
-        process.on('message', message => {
-            console.log("Received message from master. " + message)
-            visitSite(message)
-        })
-    }
+    // Register an exit handler with the master.
+    cluster.on("exit", (worker, code, signal) => {
+        console.log("Worker died.");
+    })
+
+    startQueueing(worker)
+    console.log("GOT HERE")
+} else {
+    process.on('message', message => {
+        console.log("Received message from master. " + message)
+        visitSite(message)
+    })
 }
 
-startCrawler()
